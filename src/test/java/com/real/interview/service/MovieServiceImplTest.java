@@ -5,13 +5,14 @@ import com.real.interview.entity.Movie;
 import com.real.interview.exception.MovieNotFoundException;
 import com.real.interview.repository.MovieRepository;
 import com.real.interview.service.impl.MovieServiceImpl;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -98,6 +99,44 @@ public class MovieServiceImplTest {
         // Act & Assert
         assertThrows(MovieNotFoundException.class, () -> movieService.findMovieById(movieId));
         verify(movieRepository).findById(movieId);
+        verify(movieRepository, Mockito.never()).save(any(Movie.class));
+
+    }
+
+    @Test
+    public void testUpdateMovie_HappyPath(){
+
+        //Arrange
+        MovieDto movieDto = MovieDto.builder().id(1L).title("Updated Title").releaseYear("2023").build();
+        Movie existingMovie = Movie.builder().id(1L).title("Old Title").releaseYear("2020").build();
+        Movie updatedMovie = Movie.builder().id(1L).title("Updated Title").releaseYear("2023").build();
+        when(movieRepository.findById(1L)).thenReturn(Optional.of(existingMovie));
+        when(movieRepository.save(existingMovie)).thenReturn(updatedMovie);
+
+        //Act
+        MovieDto result = movieService.updateMovie(1L, movieDto);
+
+        //Assert
+        Assertions.assertThat(result).isNotNull();
+        Assertions.assertThat(result.getId()).isEqualTo(1L);
+        Assertions.assertThat(result.getTitle()).isEqualTo("Updated Title");
+        Assertions.assertThat(result.getReleaseYear()).isEqualTo("2023");
+        verify(movieRepository).findById(1L);
+        verify(movieRepository).save(existingMovie);
+
+
+
+    }
+
+    @Test
+    void updateMovie_shouldThrowException_whenMovieDoesNotExist() {
+        MovieDto movieDto = MovieDto.builder().id(1L).title("Updated Title").releaseYear("2023").build();
+
+        when(movieRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(MovieNotFoundException.class, () -> movieService.updateMovie(1L, movieDto));
+        verify(movieRepository).findById(1L);
+        verify(movieRepository, Mockito.never()).save(any(Movie.class));
     }
 
 }
